@@ -770,6 +770,64 @@ function togNotifHabit(){
   }
 }
 
+function addToGoogleCalendar(habit){
+  if(!habit.time_of_day)return;
+  const [h,m]=habit.time_of_day.split(':').map(Number);
+  const now=new Date();
+  const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
+  const end=new Date(start.getTime()+30*60000);
+  const fmt=d=>d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const title=encodeURIComponent('Bestme: '+habit.name);
+  const details=encodeURIComponent('Hábito diario registrado en Bestme Habit Tracker');
+  const recur='RRULE:FREQ=DAILY';
+  const url=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&details=${details}&recur=${encodeURIComponent(recur)}`;
+  window.open(url,'_blank');
+}
+
+function addToAppleCalendar(habit){
+  if(!habit.time_of_day)return;
+  const [h,m]=habit.time_of_day.split(':').map(Number);
+  const now=new Date();
+  const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
+  const end=new Date(start.getTime()+30*60000);
+  const fmt=d=>d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const ics=`BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:Bestme: ${habit.name}\nDTSTART:${fmt(start)}\nDTEND:${fmt(end)}\nRRULE:FREQ=DAILY\nDESCRIPTION:Hábito diario en Bestme\nBEGIN:VALARM\nTRIGGER:-PT0M\nACTION:DISPLAY\nDESCRIPTION:${habit.name}\nEND:VALARM\nEND:VEVENT\nEND:VCALENDAR`;
+  const blob=new Blob([ics],{type:'text/calendar'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=habit.name+'.ics';a.click();
+  URL.revokeObjectURL(url);
+}
+
+function showCalendarModal(habit){
+  if(!habit.time_of_day||!habit.notify)return;
+  let modal=document.getElementById('modal-calendar');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='modal-calendar';
+    modal.className='modal-overlay';
+    modal.innerHTML=`<div class="modal">
+      <div class="modal-handle"></div>
+      <p class="modal-title">Añadir al calendario</p>
+      <p style="font-family:system-ui,sans-serif;font-size:13px;color:#9A9890;margin-bottom:16px">Crea un recordatorio diario en tu calendario a las <span id="cal-time"></span></p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn-outline" style="margin:0;display:flex;align-items:center;gap:8px;justify-content:center" id="cal-google">
+          <i class="ti ti-brand-google" style="font-size:18px"></i> Google Calendar
+        </button>
+        <button class="btn-outline" style="margin:0;display:flex;align-items:center;gap:8px;justify-content:center" id="cal-apple">
+          <i class="ti ti-calendar" style="font-size:18px"></i> Apple Calendar
+        </button>
+        <button class="btn-primary" style="margin:0;margin-top:4px" onclick="closeModal('modal-calendar')">Cerrar</button>
+      </div>
+    </div>`;
+    modal.addEventListener('click',e=>{if(e.target===modal)closeModal('modal-calendar');});
+    document.body.appendChild(modal);
+  }
+  document.getElementById('cal-time').textContent=habit.time_of_day;
+  document.getElementById('cal-google').onclick=()=>{addToGoogleCalendar(habit);closeModal('modal-calendar');};
+  document.getElementById('cal-apple').onclick=()=>{addToAppleCalendar(habit);closeModal('modal-calendar');};
+  openModal('modal-calendar');
+}
+
 function scheduleNotification(habit){
   if(!habit.notify||!habit.time_of_day||Notification.permission!=='granted')return;
   const [h,m]=habit.time_of_day.split(':').map(Number);
@@ -778,20 +836,15 @@ function scheduleNotification(habit){
   target.setHours(h,m,0,0);
   if(target<=now)target.setDate(target.getDate()+1);
   const delay=target-now;
-  const key='notif_'+habit.id;
-  const existing=localStorage.getItem(key);
-  if(existing)clearTimeout(parseInt(existing));
-  const tid=setTimeout(()=>{
+  setTimeout(()=>{
     if(Notification.permission==='granted'){
       new Notification('Bestme — '+habit.name,{
         body:'Es hora de: '+habit.name,
-        icon:'https://cristinafq.github.io/bestmeHabitTracker/icon.png',
         tag:habit.id
       });
     }
     scheduleNotification(habit);
   },delay);
-  localStorage.setItem(key,'timeout_'+tid);
 }
 
 function scheduleAllNotifications(){
@@ -821,6 +874,11 @@ async function saveHabit(){
   }
   showLoading(false);
   S.photoOn=false;closeModal('modal-add');renderHome();toast('Hábito guardado');
+  if(S.notifOn){
+    const saved=S.editingId?S.habits.find(x=>x.id===S.editingId):S.habits[S.habits.length-1];
+    if(saved)setTimeout(()=>showCalendarModal(saved),400);
+  }
+  S.notifOn=false;
 }
 
 // ── STATS ──
