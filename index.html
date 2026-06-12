@@ -763,7 +763,7 @@ function togPhoto(){S.photoOn=!S.photoOn;document.getElementById('h-photo-track'
 function togNotifHabit(){
   S.notifOn=!S.notifOn;
   document.getElementById('h-notif-track').classList.toggle('on',S.notifOn);
-  if(S.notifOn&&Notification.permission==='default'){
+  if(S.notifOn&&typeof Notification!=='undefined'&&Notification.permission==='default'){
     Notification.requestPermission().then(p=>{
       if(p!=='granted'){S.notifOn=false;document.getElementById('h-notif-track').classList.remove('on');toast('Activa los permisos de notificación en tu navegador');}
     });
@@ -832,7 +832,7 @@ function addToCalendarAuto(habit){
 }
 
 function scheduleNotification(habit){
-  if(!habit.notify||!habit.time_of_day||Notification.permission!=='granted')return;
+  if(!habit.notify||!habit.time_of_day||typeof Notification==='undefined'||Notification.permission!=='granted')return;
   const [h,m]=habit.time_of_day.split(':').map(Number);
   const now=new Date();
   const target=new Date();
@@ -840,7 +840,7 @@ function scheduleNotification(habit){
   if(target<=now)target.setDate(target.getDate()+1);
   const delay=target-now;
   setTimeout(()=>{
-    if(Notification.permission==='granted'){
+    if(typeof Notification!=='undefined'&&Notification.permission==='granted'){
       new Notification('Bestme — '+habit.name,{
         body:'Es hora de: '+habit.name,
         tag:habit.id
@@ -855,7 +855,7 @@ function scheduleAllNotifications(){
 }
 
 async function requestNotifPermission(){
-  if('Notification' in window&&Notification.permission==='default'){
+  if(typeof Notification!=='undefined'&&Notification.permission==='default'){
     await Notification.requestPermission();
   }
 }
