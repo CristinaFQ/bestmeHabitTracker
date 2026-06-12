@@ -777,10 +777,12 @@ function addToGoogleCalendar(habit){
   const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
   const end=new Date(start.getTime()+30*60000);
   const fmt=d=>d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const appUrl='https://cristinafq.github.io/bestmeHabitTracker';
   const title=encodeURIComponent('Bestme: '+habit.name);
-  const details=encodeURIComponent('Hábito diario registrado en Bestme Habit Tracker');
+  const details=encodeURIComponent('Toca para abrir la app: '+appUrl);
+  const location=encodeURIComponent(appUrl);
   const recur='RRULE:FREQ=DAILY';
-  const url=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&details=${details}&recur=${encodeURIComponent(recur)}`;
+  const url=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&details=${details}&location=${location}&recur=${encodeURIComponent(recur)}`;
   window.open(url,'_blank');
 }
 
@@ -791,7 +793,25 @@ function addToAppleCalendar(habit){
   const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
   const end=new Date(start.getTime()+30*60000);
   const fmt=d=>d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
-  const ics=`BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:Bestme: ${habit.name}\nDTSTART:${fmt(start)}\nDTEND:${fmt(end)}\nRRULE:FREQ=DAILY\nDESCRIPTION:Hábito diario en Bestme\nBEGIN:VALARM\nTRIGGER:-PT0M\nACTION:DISPLAY\nDESCRIPTION:${habit.name}\nEND:VALARM\nEND:VEVENT\nEND:VCALENDAR`;
+  const appUrl='https://cristinafq.github.io/bestmeHabitTracker';
+  const ics=[
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'BEGIN:VEVENT',
+    `SUMMARY:Bestme: ${habit.name}`,
+    `DTSTART:${fmt(start)}`,
+    `DTEND:${fmt(end)}`,
+    'RRULE:FREQ=DAILY',
+    `DESCRIPTION:Abre la app: ${appUrl}`,
+    `URL:${appUrl}`,
+    'BEGIN:VALARM',
+    'TRIGGER:-PT0M',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:${habit.name} — Abre Bestme`,
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
   const blob=new Blob([ics],{type:'text/calendar'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=habit.name+'.ics';a.click();
