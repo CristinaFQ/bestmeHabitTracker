@@ -317,6 +317,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div class="toggle-track" id="h-photo-track"><div class="toggle-knob"></div></div>
       </div>
     </div>
+    <div class="form-group">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#F7F4EF;border-radius:12px;border:0.5px solid #EAE6DE" onclick="togNotifHabit()">
+        <div><p style="font-family:system-ui,sans-serif;font-size:14px;color:#1A1A18">Activar notificación</p><p style="font-family:system-ui,sans-serif;font-size:11px;color:#9A9890;margin-top:1px">Aviso a la hora indicada</p></div>
+        <div class="toggle-track" id="h-notif-track"><div class="toggle-knob"></div></div>
+      </div>
+    </div>
     <div style="display:flex;gap:8px">
       <button class="btn-outline" style="margin:0" onclick="closeModal('modal-add')">Cancelar</button>
       <button class="btn-primary" style="margin:0" onclick="saveHabit()">Guardar</button>
@@ -485,6 +491,8 @@ async function onLogin(user){
   updateProfileUI();
   document.getElementById('admin-btn-wrap').style.display=profile?.is_admin?'block':'none';
   await loadHabits();
+  requestNotifPermission();
+  scheduleAllNotifications();
   navTo('home');
 }
 
@@ -720,6 +728,8 @@ function editFromDetail(){
   document.getElementById('h-time').value=h.time_of_day||'';
   S.photoOn=h.requires_photo;
   document.getElementById('h-photo-track').classList.toggle('on',h.requires_photo);
+  S.notifOn=h.notify||false;
+  document.getElementById('h-notif-track').classList.toggle('on',S.notifOn);
   S.selectedIconIdx=ICONS.findIndex(ic=>ic.icon===h.icon);
   if(S.selectedIconIdx<0)S.selectedIconIdx=0;
   renderIconGrid();
@@ -729,11 +739,12 @@ function editFromDetail(){
 
 // ── ADD/EDIT HABIT ──
 function openAddModal(){
-  S.editingId=null;S.photoOn=false;S.selectedIconIdx=0;
+  S.editingId=null;S.photoOn=false;S.selectedIconIdx=0;S.notifOn=false;
   document.getElementById('h-name').value='';
   document.getElementById('h-freq').value='Diario';
   document.getElementById('h-time').value='';
   document.getElementById('h-photo-track').classList.remove('on');
+  document.getElementById('h-notif-track').classList.remove('on');
   document.getElementById('modal-add-title').textContent='Nuevo hábito';
   renderIconGrid();openModal('modal-add');
 }
@@ -749,20 +760,64 @@ function renderIconGrid(){
   });
 }
 function togPhoto(){S.photoOn=!S.photoOn;document.getElementById('h-photo-track').classList.toggle('on',S.photoOn);}
+function togNotifHabit(){
+  S.notifOn=!S.notifOn;
+  document.getElementById('h-notif-track').classList.toggle('on',S.notifOn);
+  if(S.notifOn&&Notification.permission==='default'){
+    Notification.requestPermission().then(p=>{
+      if(p!=='granted'){S.notifOn=false;document.getElementById('h-notif-track').classList.remove('on');toast('Activa los permisos de notificación en tu navegador');}
+    });
+  }
+}
+
+function scheduleNotification(habit){
+  if(!habit.notify||!habit.time_of_day||Notification.permission!=='granted')return;
+  const [h,m]=habit.time_of_day.split(':').map(Number);
+  const now=new Date();
+  const target=new Date();
+  target.setHours(h,m,0,0);
+  if(target<=now)target.setDate(target.getDate()+1);
+  const delay=target-now;
+  const key='notif_'+habit.id;
+  const existing=localStorage.getItem(key);
+  if(existing)clearTimeout(parseInt(existing));
+  const tid=setTimeout(()=>{
+    if(Notification.permission==='granted'){
+      new Notification('Bestme — '+habit.name,{
+        body:'Es hora de: '+habit.name,
+        icon:'https://cristinafq.github.io/bestmeHabitTracker/icon.png',
+        tag:habit.id
+      });
+    }
+    scheduleNotification(habit);
+  },delay);
+  localStorage.setItem(key,'timeout_'+tid);
+}
+
+function scheduleAllNotifications(){
+  S.habits.forEach(h=>{if(h.notify&&h.time_of_day)scheduleNotification(h);});
+}
+
+async function requestNotifPermission(){
+  if('Notification' in window&&Notification.permission==='default'){
+    await Notification.requestPermission();
+  }
+}
 async function saveHabit(){
   const name=document.getElementById('h-name').value.trim();
   if(!name){toast('Escribe un nombre para el hábito.');return;}
   const ico=ICONS[S.selectedIconIdx]||ICONS[0];
-  const payload={user_id:S.user.id,name,icon:ico.icon,icon_bg:ico.bg,icon_color:ico.ic,freq:document.getElementById('h-freq').value,time_of_day:document.getElementById('h-time').value||null,requires_photo:S.photoOn};
+  const payload={user_id:S.user.id,name,icon:ico.icon,icon_bg:ico.bg,icon_color:ico.ic,freq:document.getElementById('h-freq').value,time_of_day:document.getElementById('h-time').value||null,requires_photo:S.photoOn,notify:S.notifOn};
   showLoading(true);
   if(S.editingId){
     await db.from('habits').update(payload).eq('id',S.editingId);
     const idx=S.habits.findIndex(x=>x.id===S.editingId);
     if(idx>=0)S.habits[idx]={...S.habits[idx],...payload};
+    if(S.notifOn)scheduleNotification(S.habits[idx>=0?idx:0]);
     S.editingId=null;
   } else {
     const {data}=await db.from('habits').insert(payload).select().single();
-    if(data)S.habits.push(data);
+    if(data){S.habits.push(data);if(S.notifOn)scheduleNotification(data);}
   }
   showLoading(false);
   S.photoOn=false;closeModal('modal-add');renderHome();toast('Hábito guardado');
