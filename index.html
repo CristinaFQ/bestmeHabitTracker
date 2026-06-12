@@ -491,8 +491,7 @@ async function onLogin(user){
   updateProfileUI();
   document.getElementById('admin-btn-wrap').style.display=profile?.is_admin?'block':'none';
   await loadHabits();
-  requestNotifPermission();
-  scheduleAllNotifications();
+  try{scheduleAllNotifications();}catch(e){console.warn(e);}
   navTo('home');
 }
 
@@ -761,13 +760,15 @@ function renderIconGrid(){
 }
 function togPhoto(){S.photoOn=!S.photoOn;document.getElementById('h-photo-track').classList.toggle('on',S.photoOn);}
 function togNotifHabit(){
-  S.notifOn=!S.notifOn;
-  document.getElementById('h-notif-track').classList.toggle('on',S.notifOn);
-  if(S.notifOn&&typeof Notification!=='undefined'&&Notification.permission==='default'){
-    Notification.requestPermission().then(p=>{
-      if(p!=='granted'){S.notifOn=false;document.getElementById('h-notif-track').classList.remove('on');toast('Activa los permisos de notificación en tu navegador');}
-    });
-  }
+  try{
+    S.notifOn=!S.notifOn;
+    document.getElementById('h-notif-track').classList.toggle('on',S.notifOn);
+    if(S.notifOn&&typeof Notification!=='undefined'&&Notification.permission==='default'){
+      Notification.requestPermission().then(p=>{
+        if(p!=='granted'){S.notifOn=false;document.getElementById('h-notif-track').classList.remove('on');toast('Activa los permisos de notificación en tu navegador');}
+      }).catch(e=>console.warn(e));
+    }
+  }catch(e){console.warn('Notif toggle error',e);}
 }
 
 function addToGoogleCalendar(habit){
@@ -831,7 +832,7 @@ function addToCalendarAuto(habit){
   }
 }
 
-function scheduleNotification(habit){
+function scheduleNotification(habit){try{
   if(!habit.notify||!habit.time_of_day||typeof Notification==='undefined'||Notification.permission!=='granted')return;
   const [h,m]=habit.time_of_day.split(':').map(Number);
   const now=new Date();
