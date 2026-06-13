@@ -832,23 +832,25 @@ function addToCalendarAuto(habit){
   }
 }
 
-function scheduleNotification(habit){try{
-  if(!habit.notify||!habit.time_of_day||typeof Notification==='undefined'||Notification.permission!=='granted')return;
-  const [h,m]=habit.time_of_day.split(':').map(Number);
-  const now=new Date();
-  const target=new Date();
-  target.setHours(h,m,0,0);
-  if(target<=now)target.setDate(target.getDate()+1);
-  const delay=target-now;
-  setTimeout(()=>{
-    if(typeof Notification!=='undefined'&&Notification.permission==='granted'){
-      new Notification('Bestme — '+habit.name,{
-        body:'Es hora de: '+habit.name,
-        tag:habit.id
-      });
-    }
-    scheduleNotification(habit);
-  },delay);
+function scheduleNotification(habit){
+  try{
+    if(!habit.notify||!habit.time_of_day)return;
+    if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
+    const [h,m]=habit.time_of_day.split(':').map(Number);
+    const now=new Date();
+    const target=new Date();
+    target.setHours(h,m,0,0);
+    if(target<=now)target.setDate(target.getDate()+1);
+    const delay=target-now;
+    setTimeout(()=>{
+      try{
+        if(typeof Notification!=='undefined'&&Notification.permission==='granted'){
+          new Notification('Bestme: '+habit.name,{body:'Es hora de: '+habit.name,tag:habit.id});
+        }
+        scheduleNotification(habit);
+      }catch(e){console.warn(e);}
+    },delay);
+  }catch(e){console.warn('Notif not supported',e);}
 }
 
 function scheduleAllNotifications(){
