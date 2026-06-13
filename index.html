@@ -271,7 +271,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <i class="ti ti-chevron-right" style="color:#D6D0C4;font-size:16px"></i>
       </div>
     </div>
-    <button class="btn-danger-outline" onclick="doLogout()"><i class="ti ti-logout"></i> Cerrar sesión</button>
+    <button class="btn-danger-outline" onclick="doLogout()"><i class="ti ti-logout"></i> Cerrar sesión en este dispositivo</button>
   </div>
 </div>
 
@@ -388,7 +388,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 const SUPA_URL='https://bodrldhmyqyclghphkck.supabase.co';
 const SUPA_KEY='sb_publishable_fMi1fV1d3eM3DUJpM3SJAg_i2v5Yr5j';
 const { createClient } = supabase;
-const db = createClient(SUPA_URL, SUPA_KEY);
+const db = createClient(SUPA_URL, SUPA_KEY, {
+  auth: {
+    persistSession: true,
+    storageKey: 'bestme_session',
+    storage: window.localStorage,
+    autoRefreshToken: true,
+    detectSessionInUrl: false
+  }
+});
 
 // ── ICONS ──
 const ICONS=[
@@ -628,14 +636,43 @@ async function upsertLog(habitId,status,photoUrl){
 async function startCamera(){
   try{
     if(cameraStream)cameraStream.getTracks().forEach(t=>t.stop());
+    // Check if permission already granted
+    if(navigator.permissions){
+      try{
+        const perm=await navigator.permissions.query({name:'camera'});
+        if(perm.state==='denied'){
+          showCameraPermissionHelp();return;
+        }
+      }catch(e){}
+    }
     cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode,width:{ideal:1280},height:{ideal:1280}},audio:false});
+    // Remember that camera permission was granted
+    localStorage.setItem('bestme_cam_granted','1');
     document.getElementById('video-preview').srcObject=cameraStream;
     document.getElementById('camera-overlay').classList.add('open');
   }catch(e){
-    toast('No se pudo acceder a la cámara');
-    const h=S.habits.find(x=>x.id===S.pendingHabitId);
-    if(h){await upsertLog(h.id,'done',null);renderHome();showShareModal(h,null);}
+    if(e.name==='NotAllowedError'){
+      showCameraPermissionHelp();
+    } else {
+      toast('No se pudo acceder a la cámara');
+      const h=S.habits.find(x=>x.id===S.pendingHabitId);
+      if(h){await upsertLog(h.id,'done',null);renderHome();showShareModal(h,null);}
+    }
   }
+}
+
+function showCameraPermissionHelp(){
+  // Only show this message if they haven't granted before
+  const wasGranted=localStorage.getItem('bestme_cam_granted');
+  if(wasGranted){
+    // They granted before but something changed - show settings help
+    toast('Activa la cámara en Ajustes → Safari → Cámara');
+  } else {
+    toast('Permite el acceso a la cámara cuando el navegador lo pida');
+  }
+  // Complete habit without photo as fallback
+  const h=S.habits.find(x=>x.id===S.pendingHabitId);
+  if(h){upsertLog(h.id,'done',null).then(()=>{renderHome();showShareModal(h,null);});}
 }
 function flipCamera(){facingMode=facingMode==='environment'?'user':'environment';startCamera();}
 function takePhoto(){
