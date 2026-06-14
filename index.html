@@ -599,6 +599,7 @@ async function onLogin(user){
   await loadHabits();
   try{scheduleAllNotifications();}catch(e){console.warn(e);}
   navTo('home');
+  renderHome();
 }
 
 async function doLogout(){
@@ -640,8 +641,8 @@ function navTo(s){
   document.querySelectorAll('.nb').forEach(b=>{b.classList.remove('active');const d=b.querySelector('.nb-dot');if(d)d.remove();});
   const nb=document.getElementById('nb-'+s);
   if(nb){nb.classList.add('active');const d=document.createElement('div');d.className='nb-dot';nb.appendChild(d);}
-  if(s==='home')renderHome();
-  if(s==='stats')renderStats();
+  if(s==='home'){loadHabits().then(()=>renderHome());}
+  if(s==='stats'){loadHabits().then(()=>renderStats());}
   if(s==='feed')renderFeed();
   if(s==='admin')renderAdmin();
 }
