@@ -279,6 +279,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <div class="toggle-track" id="t-priv"><div class="toggle-knob"></div></div>
       </div>
     </div>
+    <div class="setting-card">
+      <div class="setting-row" onclick="openEditProfile()">
+        <div class="setting-icon"><i class="ti ti-user-edit"></i></div>
+        <div style="flex:1"><p class="setting-label">Editar nombre</p><p class="setting-sub">Cambia cómo te ven las demás</p></div>
+        <i class="ti ti-chevron-right" style="color:#D6D0C4;font-size:16px"></i>
+      </div>
+      <div class="setting-row" onclick="openChangePassword()">
+        <div class="setting-icon"><i class="ti ti-lock"></i></div>
+        <div style="flex:1"><p class="setting-label">Cambiar contraseña</p><p class="setting-sub">Actualiza tu contraseña</p></div>
+        <i class="ti ti-chevron-right" style="color:#D6D0C4;font-size:16px"></i>
+      </div>
+    </div>
     <div class="setting-card" id="admin-btn-wrap" style="display:none">
       <div class="setting-row" onclick="navTo('admin')">
         <div class="setting-icon"><i class="ti ti-shield"></i></div>
@@ -397,6 +409,34 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <div id="toast" class="toast"></div>
+
+<!-- MODAL EDITAR NOMBRE -->
+<div class="modal-overlay" id="modal-edit-profile" onclick="closeOut(event,'modal-edit-profile')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <p class="modal-title">Editar nombre</p>
+    <div class="form-group"><label>Tu nombre</label><input type="text" id="edit-name" placeholder="Tu nombre"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-outline" style="margin:0" onclick="closeModal('modal-edit-profile')">Cancelar</button>
+      <button class="btn-primary" style="margin:0" onclick="saveProfileName()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CAMBIAR CONTRASEÑA -->
+<div class="modal-overlay" id="modal-change-pass" onclick="closeOut(event,'modal-change-pass')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <p class="modal-title">Cambiar contraseña</p>
+    <div class="form-group"><label>Nueva contraseña</label><input type="password" id="new-pass" placeholder="Mínimo 6 caracteres"></div>
+    <div class="form-group"><label>Repite la contraseña</label><input type="password" id="new-pass2" placeholder="Repite la contraseña"></div>
+    <p id="change-pass-msg" style="font-family:system-ui,sans-serif;font-size:12px;text-align:center;margin-bottom:10px;display:none"></p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-outline" style="margin:0" onclick="closeModal('modal-change-pass')">Cancelar</button>
+      <button class="btn-primary" style="margin:0" onclick="saveNewPassword()">Guardar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ── SUPABASE ──
@@ -537,6 +577,7 @@ async function doReset(){
   try{
     const {error}=await db.auth.updateUser({password:pass});
     if(error)throw error;
+    isResetting=false;
     msgEl.style.color='#3D6438';
     msgEl.textContent='✓ Contraseña guardada. Entrando...';
     msgEl.style.display='block';
@@ -1081,6 +1122,50 @@ async function renderAdmin(){
 function togNotif(){S.notif=!S.notif;document.getElementById('t-notif').classList.toggle('on',S.notif);}
 function togPriv(){S.priv=!S.priv;document.getElementById('t-priv').classList.toggle('on',S.priv);}
 
+function openEditProfile(){
+  document.getElementById('edit-name').value=S.profile?.name||'';
+  openModal('modal-edit-profile');
+}
+
+async function saveProfileName(){
+  const name=document.getElementById('edit-name').value.trim();
+  if(!name){toast('Escribe tu nombre.');return;}
+  showLoading(true);
+  try{
+    await db.from('profiles').update({name}).eq('id',S.user.id);
+    S.profile={...S.profile,name};
+    updateProfileUI();
+    toast('Nombre actualizado');
+    closeModal('modal-edit-profile');
+  }catch(e){toast('Error al guardar.');}
+  finally{showLoading(false);}
+}
+
+function openChangePassword(){
+  document.getElementById('new-pass').value='';
+  document.getElementById('new-pass2').value='';
+  document.getElementById('change-pass-msg').style.display='none';
+  openModal('modal-change-pass');
+}
+
+async function saveNewPassword(){
+  const pass=document.getElementById('new-pass').value;
+  const pass2=document.getElementById('new-pass2').value;
+  const msgEl=document.getElementById('change-pass-msg');
+  msgEl.style.display='none';
+  if(pass.length<6){msgEl.style.color='#9A3A3A';msgEl.textContent='Mínimo 6 caracteres.';msgEl.style.display='block';return;}
+  if(pass!==pass2){msgEl.style.color='#9A3A3A';msgEl.textContent='Las contraseñas no coinciden.';msgEl.style.display='block';return;}
+  showLoading(true);
+  try{
+    const {error}=await db.auth.updateUser({password:pass});
+    if(error)throw error;
+    toast('Contraseña actualizada');
+    closeModal('modal-change-pass');
+  }catch(e){
+    msgEl.style.color='#9A3A3A';msgEl.textContent='Error al guardar. Inténtalo de nuevo.';msgEl.style.display='block';
+  }finally{showLoading(false);}
+}
+
 // ── MODALS ──
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -1113,19 +1198,20 @@ async function handleUrlToken(){
   return false;
 }
 
+let isResetting=false;
 db.auth.onAuthStateChange((event,session)=>{
   if(event==='PASSWORD_RECOVERY'){
+    isResetting=true;
     navTo('login');
     showReset();
     return;
   }
-  if(event==='SIGNED_IN'&&session&&!S.user){
-    // Only auto-login if not in reset flow
-    if(document.getElementById('view-reset').style.display==='flex')return;
-    onLogin(session.user);
+  if(event==='SIGNED_IN'&&session){
+    if(isResetting)return; // stay on reset screen
+    if(!S.user)onLogin(session.user);
     return;
   }
-  if(!session&&S.user){S.user=null;navTo('login');}
+  if(event==='SIGNED_OUT'){S.user=null;isResetting=false;navTo('login');}
 });
 
 handleUrlToken().then(isReset=>{
