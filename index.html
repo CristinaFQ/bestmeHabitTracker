@@ -1089,23 +1089,52 @@ function closeOut(e,id){if(e.target===document.getElementById(id))closeModal(id)
 // ── INIT ──
 renderIconGrid();
 
-// Detect password reset link
-db.auth.onAuthStateChange((event, session)=>{
+// Handle password reset token in URL hash
+async function handleUrlToken(){
+  const hash=window.location.hash;
+  const params=new URLSearchParams(hash.replace('#',''));
+  const type=params.get('type');
+  const accessToken=params.get('access_token');
+  const refreshToken=params.get('refresh_token');
+
+  if(type==='recovery'&&accessToken){
+    // Set session from URL tokens
+    const {error}=await db.auth.setSession({
+      access_token:accessToken,
+      refresh_token:refreshToken||''
+    });
+    // Clear hash from URL
+    window.history.replaceState(null,'',window.location.pathname);
+    // Show reset screen
+    navTo('login');
+    showReset();
+    return true;
+  }
+  return false;
+}
+
+db.auth.onAuthStateChange((event,session)=>{
   if(event==='PASSWORD_RECOVERY'){
     navTo('login');
     showReset();
     return;
   }
   if(event==='SIGNED_IN'&&session&&!S.user){
+    // Only auto-login if not in reset flow
+    if(document.getElementById('view-reset').style.display==='flex')return;
     onLogin(session.user);
     return;
   }
   if(!session&&S.user){S.user=null;navTo('login');}
 });
 
-db.auth.getSession().then(({data:{session}})=>{
-  if(session?.user){onLogin(session.user);}
-  else{navTo('login');}
+handleUrlToken().then(isReset=>{
+  if(!isReset){
+    db.auth.getSession().then(({data:{session}})=>{
+      if(session?.user){onLogin(session.user);}
+      else{navTo('login');}
+    });
+  }
 });
 </script>
 </body>
