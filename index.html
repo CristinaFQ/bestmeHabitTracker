@@ -1174,31 +1174,22 @@ function closeOut(e,id){if(e.target===document.getElementById(id))closeModal(id)
 // ── INIT ──
 renderIconGrid();
 
-// Handle password reset token in URL hash
-async function handleUrlToken(){
-  const hash=window.location.hash;
-  const params=new URLSearchParams(hash.replace('#',''));
-  const type=params.get('type');
-  const accessToken=params.get('access_token');
-  const refreshToken=params.get('refresh_token');
+let isResetting=false;
 
-  if(type==='recovery'&&accessToken){
-    // Set session from URL tokens
-    const {error}=await db.auth.setSession({
-      access_token:accessToken,
-      refresh_token:refreshToken||''
-    });
-    // Clear hash from URL
-    window.history.replaceState(null,'',window.location.pathname);
-    // Show reset screen
-    navTo('login');
-    showReset();
-    return true;
-  }
-  return false;
+// Check URL hash FIRST before anything else
+const _hash=window.location.hash;
+const _params=new URLSearchParams(_hash.replace('#',''));
+const _type=_params.get('type');
+const _accessToken=_params.get('access_token');
+const _refreshToken=_params.get('refresh_token');
+const _isRecovery=_type==='recovery'&&!!_accessToken;
+
+if(_isRecovery){
+  // Clear hash immediately so it does not get processed again
+  window.history.replaceState(null,'',window.location.pathname);
+  isResetting=true;
 }
 
-let isResetting=false;
 db.auth.onAuthStateChange((event,session)=>{
   if(event==='PASSWORD_RECOVERY'){
     isResetting=true;
@@ -1207,21 +1198,35 @@ db.auth.onAuthStateChange((event,session)=>{
     return;
   }
   if(event==='SIGNED_IN'&&session){
-    if(isResetting)return; // stay on reset screen
+    if(isResetting){
+      // Stay on reset screen, do not auto-login
+      navTo('login');
+      showReset();
+      return;
+    }
     if(!S.user)onLogin(session.user);
     return;
   }
   if(event==='SIGNED_OUT'){S.user=null;isResetting=false;navTo('login');}
 });
 
-handleUrlToken().then(isReset=>{
-  if(!isReset){
-    db.auth.getSession().then(({data:{session}})=>{
-      if(session?.user){onLogin(session.user);}
-      else{navTo('login');}
+async function init(){
+  if(_isRecovery){
+    // Process recovery token
+    await db.auth.setSession({
+      access_token:_accessToken,
+      refresh_token:_refreshToken||''
     });
+    navTo('login');
+    showReset();
+  } else {
+    const {data:{session}}=await db.auth.getSession();
+    if(session?.user){onLogin(session.user);}
+    else{navTo('login');}
   }
-});
+}
+
+init();
 </script>
 </body>
 </html>
