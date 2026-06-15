@@ -752,7 +752,7 @@ function renderHome(){
   const months=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const d=new Date();d.setDate(d.getDate()+S.day);
   const dayName=days[d.getDay()];
-  const dateStr2=`${dayName} ${d.getDate()} ${months[d.getMonth()]}`;
+  const dateStr2=dayName+' '+d.getDate()+' '+months[d.getMonth()];
   let label='';
   if(S.day===0)label='Hoy · '+dateStr2;
   else if(S.day===-1)label='Ayer · '+dateStr2;
