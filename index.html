@@ -182,7 +182,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <p class="login-title">Bestme</p>
     <p class="login-sub">Tu espacio de hábitos</p>
     <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="tu@email.com" autocomplete="email"></div>
-    <div class="form-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"></div>
+    <div class="form-group"><label>Contraseña</label><div style="position:relative"><input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" style="padding-right:44px"><button type="button" onclick="togglePass('login-pass','eye-login')" id="eye-login" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9A9890;padding:4px"><i class="ti ti-eye" style="font-size:18px"></i></button></div></div>
     <button class="btn-primary" onclick="doAuth()">Entrar</button>
     <button onclick="showForgot()" style="background:none;border:none;cursor:pointer;font-family:system-ui,sans-serif;font-size:13px;color:#9A9890;text-align:center;width:100%;margin-top:14px;padding:4px">He olvidado mi contraseña</button>
     <p id="auth-error" style="font-family:system-ui,sans-serif;font-size:12px;color:#9A3A3A;text-align:center;margin-top:8px;display:none"></p>
@@ -203,8 +203,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="login-logo" style="background:#E4EFE2"><i class="ti ti-lock-open" style="color:#3D6438"></i></div>
     <p class="login-title">Nueva contraseña</p>
     <p class="login-sub" style="margin-bottom:24px">Elige una contraseña segura para tu cuenta</p>
-    <div class="form-group"><label>Nueva contraseña</label><input type="password" id="reset-pass" placeholder="Mínimo 6 caracteres"></div>
-    <div class="form-group"><label>Repite la contraseña</label><input type="password" id="reset-pass2" placeholder="Repite la contraseña"></div>
+    <div class="form-group"><label>Nueva contraseña</label><div style="position:relative"><input type="password" id="reset-pass" placeholder="Mínimo 6 caracteres" style="padding-right:44px"><button type="button" onclick="togglePass('reset-pass','eye-reset')" id="eye-reset" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9A9890;padding:4px"><i class="ti ti-eye" style="font-size:18px"></i></button></div></div>
+    <div class="form-group"><label>Repite la contraseña</label><div style="position:relative"><input type="password" id="reset-pass2" placeholder="Repite la contraseña" style="padding-right:44px"><button type="button" onclick="togglePass('reset-pass2','eye-reset2')" id="eye-reset2" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9A9890;padding:4px"><i class="ti ti-eye" style="font-size:18px"></i></button></div></div>
     <button class="btn-primary" onclick="doReset()">Guardar contraseña</button>
     <p id="reset-msg" style="font-family:system-ui,sans-serif;font-size:13px;text-align:center;margin-top:12px;display:none"></p>
   </div>
@@ -440,6 +440,23 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   </div>
 </div>
 
+<!-- MODAL FOTO O SIN FOTO -->
+<div class="modal-overlay" id="modal-photo-skip" onclick="closeOut(event,'modal-photo-skip')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <p class="modal-title" id="photo-skip-name"></p>
+    <p style="font-family:system-ui,sans-serif;font-size:13px;color:#9A9890;margin-bottom:16px">Este hábito tiene foto requerida. ¿Cómo quieres completarlo?</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-primary" style="margin:0;display:flex;align-items:center;gap:8px;justify-content:center" onclick="closeModal('modal-photo-skip');startCamera()">
+        <i class="ti ti-camera" style="font-size:16px"></i> Tomar foto
+      </button>
+      <button class="btn-outline" style="margin:0;display:flex;align-items:center;gap:8px;justify-content:center" onclick="completeWithoutPhoto()">
+        <i class="ti ti-check" style="font-size:16px"></i> Completar sin foto
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL COMENTARIO -->
 <div class="modal-overlay" id="modal-comment" onclick="closeOut(event,'modal-comment')">
   <div class="modal">
@@ -530,8 +547,8 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
   <div class="modal">
     <div class="modal-handle"></div>
     <p class="modal-title">Cambiar contraseña</p>
-    <div class="form-group"><label>Nueva contraseña</label><input type="password" id="new-pass" placeholder="Mínimo 6 caracteres"></div>
-    <div class="form-group"><label>Repite la contraseña</label><input type="password" id="new-pass2" placeholder="Repite la contraseña"></div>
+    <div class="form-group"><label>Nueva contraseña</label><div style="position:relative"><input type="password" id="new-pass" placeholder="Mínimo 6 caracteres" style="padding-right:44px"><button type="button" onclick="togglePass('new-pass','eye-new')" id="eye-new" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9A9890;padding:4px"><i class="ti ti-eye" style="font-size:18px"></i></button></div></div>
+    <div class="form-group"><label>Repite la contraseña</label><div style="position:relative"><input type="password" id="new-pass2" placeholder="Repite la contraseña" style="padding-right:44px"><button type="button" onclick="togglePass('new-pass2','eye-new2')" id="eye-new2" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#9A9890;padding:4px"><i class="ti ti-eye" style="font-size:18px"></i></button></div></div>
     <p id="change-pass-msg" style="font-family:system-ui,sans-serif;font-size:12px;text-align:center;margin-bottom:10px;display:none"></p>
     <div style="display:flex;gap:8px">
       <button class="btn-outline" style="margin:0" onclick="closeModal('modal-change-pass')">Cancelar</button>
@@ -556,27 +573,32 @@ const db = createClient(SUPA_URL, SUPA_KEY, {
 });
 
 // ── ICONS ──
+// Icons organized by category: Salud, Mente, Movimiento, Nutrición, Trabajo, Bienestar
 const ICONS=[
-  {icon:'ti-brain',   bg:'#F0EDE6',ic:'#5A4F3A'},
-  {icon:'ti-droplet', bg:'#E8EFF5',ic:'#3A4F5A'},
-  {icon:'ti-walk',    bg:'#EAF0E8',ic:'#3A5A40'},
-  {icon:'ti-book',    bg:'#F5F0E8',ic:'#5A4A2A'},
-  {icon:'ti-pencil',  bg:'#F5ECE8',ic:'#5A3A2A'},
-  {icon:'ti-heart',   bg:'#F5EBF0',ic:'#5A3A4A'},
-  {icon:'ti-sun',     bg:'#F5F2E8',ic:'#5A4F2A'},
-  {icon:'ti-moon',    bg:'#EDEAF5',ic:'#3A3A5A'},
-  {icon:'ti-dumbbell',bg:'#EAF0E8',ic:'#2A4A30'},
-  {icon:'ti-apple',   bg:'#EAF0E8',ic:'#3A5A30'},
-  {icon:'ti-music',   bg:'#F0EBF5',ic:'#4A3A5A'},
-  {icon:'ti-run',     bg:'#EAF0E8',ic:'#2A5040'},
-  {icon:'ti-bed',     bg:'#EEF0F5',ic:'#3A3A5A'},
-  {icon:'ti-plant-2', bg:'#EAF0E8',ic:'#2A5030'},
-  {icon:'ti-yoga',    bg:'#F5EBF0',ic:'#5A2A3A'},
-  {icon:'ti-salad',   bg:'#EAF0E8',ic:'#3A5030'},
-  {icon:'ti-coffee',  bg:'#F5F0E8',ic:'#5A3A2A'},
-  {icon:'ti-phone-off',bg:'#F0EDE6',ic:'#5A4A3A'},
-  {icon:'ti-flame',   bg:'#F5ECE8',ic:'#5A3020'},
-  {icon:'ti-star',    bg:'#F5F2E8',ic:'#5A4A20'},
+  // Salud física
+  {icon:'ti-heart-rate-monitor', bg:'#FBE8E8',ic:'#8B2020'},
+  {icon:'ti-dumbbell',           bg:'#EAF0E8',ic:'#2A5A30'},
+  {icon:'ti-run',                bg:'#E8F4EA',ic:'#1D7A35'},
+  {icon:'ti-walk',               bg:'#EAF5EC',ic:'#2A6A3A'},
+  {icon:'ti-bike',               bg:'#E8F0F5',ic:'#1A4A7A'},
+  // Mente y bienestar
+  {icon:'ti-brain',              bg:'#F0EDE6',ic:'#5A4F3A'},
+  {icon:'ti-yoga',               bg:'#F5EBF0',ic:'#7A2A5A'},
+  {icon:'ti-moon',               bg:'#EDEAF5',ic:'#3A2A7A'},
+  {icon:'ti-bed',                bg:'#EEF0F5',ic:'#3A4A6A'},
+  {icon:'ti-seeding',            bg:'#EAF0E8',ic:'#2A5030'},
+  // Nutrición
+  {icon:'ti-salad',              bg:'#EAF5EA',ic:'#2A6A2A'},
+  {icon:'ti-apple',              bg:'#F5EAEA',ic:'#7A2A2A'},
+  {icon:'ti-droplet',            bg:'#E8EFF5',ic:'#1A4A7A'},
+  {icon:'ti-coffee',             bg:'#F5F0E8',ic:'#6A4A2A'},
+  {icon:'ti-soup',               bg:'#FFF0E8',ic:'#8A4A1A'},
+  // Trabajo y desarrollo
+  {icon:'ti-book',               bg:'#F5F0E8',ic:'#5A4A2A'},
+  {icon:'ti-pencil',             bg:'#F5ECE8',ic:'#6A3A2A'},
+  {icon:'ti-device-laptop',      bg:'#EEF0F5',ic:'#2A3A6A'},
+  {icon:'ti-target',             bg:'#F5EAEA',ic:'#7A2A2A'},
+  {icon:'ti-chart-line',         bg:'#E8F0F5',ic:'#1A4A7A'},
 ];
 
 // ── STATE ──
@@ -766,6 +788,10 @@ function renderHome(){
   else if(S.day===1)label='Mañana · '+dateStr2;
   else label=dateStr2.charAt(0).toUpperCase()+dateStr2.slice(1);
   document.getElementById('day-lbl').textContent=label;
+  const todayBtn=document.getElementById('today-btn');
+  if(todayBtn)todayBtn.style.display=S.day!==0?'block':'none';
+  const todayPill=document.getElementById('today-pill');
+  if(todayPill)todayPill.style.display=S.day!==0?'block':'none';
 
   document.getElementById('hero-date').textContent=new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
 
@@ -832,8 +858,26 @@ async function toggleHabit(id){
     await upsertLog(id,'pending',null);
     renderHome();return;
   }
-  if(h.requires_photo){startCamera();return;}
+  if(h.requires_photo){
+    // Show option to take photo or complete without it
+    showPhotoOrSkipModal(h);
+    return;
+  }
   await upsertLog(id,'done',null);
+  renderHome();
+  showCommentModal(h);
+}
+
+function showPhotoOrSkipModal(h){
+  document.getElementById('photo-skip-name').textContent=h.name;
+  openModal('modal-photo-skip');
+}
+
+async function completeWithoutPhoto(){
+  closeModal('modal-photo-skip');
+  const h=S.habits.find(function(x){return x.id===S.pendingHabitId;});
+  if(!h)return;
+  await upsertLog(h.id,'done',null);
   renderHome();
   showCommentModal(h);
 }
@@ -1394,6 +1438,15 @@ async function saveNewPassword(){
   }catch(e){
     msgEl.style.color='#9A3A3A';msgEl.textContent='Error al guardar. Inténtalo de nuevo.';msgEl.style.display='block';
   }finally{showLoading(false);}
+}
+
+// ── PASSWORD TOGGLE ──
+function togglePass(fieldId, btnId){
+  const input=document.getElementById(fieldId);
+  const btn=document.getElementById(btnId);
+  const isPassword=input.type==='password';
+  input.type=isPassword?'text':'password';
+  btn.innerHTML=isPassword?'<i class="ti ti-eye-off" style="font-size:18px"></i>':'<i class="ti ti-eye" style="font-size:18px"></i>';
 }
 
 // ── MODALS ──
