@@ -1056,48 +1056,75 @@ function togNotifHabit(){
   }catch(e){console.warn('Notif toggle error',e);}
 }
 
+function getCalendarRRule(habit){
+  const freq=habit.freq||'diario';
+  const days=['SU','MO','TU','WE','TH','FR','SA'];
+  if(freq==='diario')return 'RRULE:FREQ=DAILY';
+  if(freq==='semanal'){
+    const day=days[parseInt(habit.freq_days||'1')];
+    return 'RRULE:FREQ=WEEKLY;BYDAY='+day;
+  }
+  if(freq==='mensual'){
+    return 'RRULE:FREQ=MONTHLY;BYMONTHDAY='+(habit.freq_days||'1');
+  }
+  if(freq==='especificos'){
+    try{
+      const dayNums=JSON.parse(habit.freq_days||'[]');
+      const byDay=dayNums.map(function(d){return days[d];}).join(',');
+      return 'RRULE:FREQ=WEEKLY;BYDAY='+byDay;
+    }catch(e){return 'RRULE:FREQ=DAILY';}
+  }
+  return 'RRULE:FREQ=DAILY';
+}
+
 function addToGoogleCalendar(habit){
   if(!habit.time_of_day)return;
-  const [h,m]=habit.time_of_day.split(':').map(Number);
+  const parts=habit.time_of_day.split(':');
+  const h=parseInt(parts[0]);
+  const m=parseInt(parts[1]);
   const now=new Date();
   const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
   const end=new Date(start.getTime()+30*60000);
-  const fmt=d=>d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const fmt=function(d){return d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';};
   const appUrl='https://cristinafq.github.io/bestmeHabitTracker';
   const title=encodeURIComponent('Bestme: '+habit.name);
   const details=encodeURIComponent('Toca para abrir la app: '+appUrl);
   const location=encodeURIComponent(appUrl);
-  const recur='RRULE:FREQ=DAILY';
-  const url=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&details=${details}&location=${location}&recur=${encodeURIComponent(recur)}`;
+  const recur=getCalendarRRule(habit);
+  const url='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+title+'&dates='+fmt(start)+'/'+fmt(end)+'&details='+details+'&location='+location+'&recur='+encodeURIComponent(recur);
   window.open(url,'_blank');
 }
 
 function addToAppleCalendar(habit){
   if(!habit.time_of_day)return;
-  const [h,m]=habit.time_of_day.split(':').map(Number);
+  const parts=habit.time_of_day.split(':');
+  const h=parseInt(parts[0]);
+  const m=parseInt(parts[1]);
   const now=new Date();
   const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),h,m,0);
   const end=new Date(start.getTime()+30*60000);
-  const fmt=d=>d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+  const fmt=function(d){return d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';};
   const appUrl='https://cristinafq.github.io/bestmeHabitTracker';
+  const rrule=getCalendarRRule(habit);
   const ics=[
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'BEGIN:VEVENT',
-    `SUMMARY:Bestme: ${habit.name}`,
-    `DTSTART:${fmt(start)}`,
-    `DTEND:${fmt(end)}`,
-    'RRULE:FREQ=DAILY',
-    `DESCRIPTION:Abre la app: ${appUrl}`,
-    `URL:${appUrl}`,
+    'SUMMARY:Bestme: '+habit.name,
+    'DTSTART:'+fmt(start),
+    'DTEND:'+fmt(end),
+    rrule,
+    'DESCRIPTION:Abre la app: '+appUrl,
+    'URL:'+appUrl,
     'BEGIN:VALARM',
     'TRIGGER:-PT0M',
     'ACTION:DISPLAY',
-    `DESCRIPTION:${habit.name} — Abre Bestme`,
+    'DESCRIPTION:'+habit.name+' - Abre Bestme',
     'END:VALARM',
     'END:VEVENT',
     'END:VCALENDAR'
-  ].join('\r\n');
+  ].join('
+');
   const blob=new Blob([ics],{type:'text/calendar'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download=habit.name+'.ics';a.click();
