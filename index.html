@@ -242,6 +242,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <button class="day-btn" onclick="chDay(1)"><i class="ti ti-chevron-right" style="font-size:20px"></i></button>
   </div>
   <div id="home-content"></div>
+  <!-- Floating today pill -->
+  <div id="today-pill" style="display:none;position:fixed;bottom:82px;left:50%;transform:translateX(-50%);z-index:50">
+    <button onclick="goToday()" style="background:#1A1A18;color:#FDFCFA;border:none;border-radius:24px;font-family:system-ui,sans-serif;font-size:12px;padding:8px 16px;cursor:pointer;box-shadow:0 2px 12px rgba(26,26,24,0.25);display:flex;align-items:center;gap:6px;white-space:nowrap">
+      <i class="ti ti-calendar-event" style="font-size:14px"></i> Ir a hoy
+    </button>
+  </div>
 </div>
 
 <div id="screen-stats" class="screen">
@@ -325,7 +331,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 </div>
 
 <nav class="navbar" id="main-nav" style="display:none">
-  <button class="nb active" id="nb-home" onclick="navTo('home')"><i class="ti ti-home"></i>Hoy<div class="nb-dot"></div></button>
+  <button class="nb active" id="nb-home" onclick="goHomeToday()"><i class="ti ti-home"></i>Hoy<div class="nb-dot"></div></button>
   <button class="nb" id="nb-stats" onclick="navTo('stats')"><i class="ti ti-chart-bar"></i>Progreso</button>
   <button class="nb" id="nb-feed" onclick="navTo('feed')"><i class="ti ti-users"></i>Comunidad</button>
   <button class="nb" id="nb-profile" onclick="navTo('profile')"><i class="ti ti-user"></i>Perfil</button>
@@ -691,7 +697,7 @@ async function onLogin(user){
   const {data:profile}=await db.from('profiles').select('*').eq('id',user.id).single();
   S.profile=profile;
   updateProfileUI();
-  document.getElementById('admin-btn-wrap').style.display=profile?.is_admin?'block':'none';
+  document.getElementById('admin-btn-wrap').style.display=(profile && profile.is_admin)?'block':'none';
   await loadHabits();
   try{scheduleAllNotifications();}catch(e){console.warn(e);}
   navTo('home');
@@ -706,8 +712,8 @@ async function doLogout(){
 
 // ── PROFILE UI ──
 function updateProfileUI(){
-  const name=S.profile?.name||S.user?.email?.split('@')[0]||'—';
-  const email=S.user?.email||'—';
+  const name=(S.profile && S.profile.name)||(S.user && S.user.email)?.split('@')[0]||'—';
+  const email=(S.user && S.user.email)||'—';
   const ini=name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   document.getElementById('hero-name').textContent=name;
   document.getElementById('profile-name').textContent=name;
@@ -746,13 +752,14 @@ function navTo(s){
 // ── HOME ──
 function chDay(d){S.day=Math.max(-365,Math.min(365,S.day+d));loadHabits().then(()=>renderHome());}
 function goToday(){S.day=0;loadHabits().then(()=>renderHome());}
+function goHomeToday(){S.day=0;navTo('home');}
 
 function renderHome(){
   const days=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
   const months=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const d=new Date();d.setDate(d.getDate()+S.day);
   const dayName=days[d.getDay()];
-  const dateStr2=`${dayName} ${d.getDate()} ${months[d.getMonth()]}`;
+  const dateStr2=dayName+' '+d.getDate()+' '+months[d.getMonth()];
   let label='';
   if(S.day===0)label='Hoy · '+dateStr2;
   else if(S.day===-1)label='Ayer · '+dateStr2;
@@ -925,7 +932,7 @@ async function acceptPhoto(){
     const {data:upData,error:upErr}=await db.storage.from('habit-photos').upload(filename,blob,{contentType:'image/jpeg',upsert:true});
     if(!upErr&&upData){
       const {data:urlData}=db.storage.from('habit-photos').getPublicUrl(filename);
-      photoUrl=urlData?.publicUrl||null;
+      photoUrl=(urlData && urlData.publicUrl)||null;
     }
   }catch(e){console.warn('Upload error',e);}
   finally{showLoading(false);}
@@ -942,7 +949,7 @@ function cancelCam(){
 
 // ── SHARE ──
 function showShareModal(h,photoUrl){
-  document.getElementById('share-name').textContent=h?.name||'';
+  document.getElementById('share-name').textContent=(h && h.name)||'';
   const wrap=document.getElementById('share-photo-wrap');
   if(photoUrl){document.getElementById('share-photo-img').src=photoUrl;wrap.style.display='block';}
   else{wrap.style.display='none';}
@@ -952,7 +959,7 @@ async function doShare(){
   const h=S.habits.find(x=>x.id===S.pendingHabitId);
   const log=S.logs[S.pendingHabitId];
   if(h){
-    await db.from('feed_posts').insert({user_id:S.user.id,habit_name:h.name,photo_url:log?.photo_url||null});
+    await db.from('feed_posts').insert({user_id:S.user.id,habit_name:h.name,photo_url:(log && log.photo_url)||null});
     toast('¡Compartido con la comunidad!');
   }
   closeModal('modal-share');
@@ -971,7 +978,7 @@ function openDetail(id){
   document.getElementById('det-count').textContent=(Math.floor(Math.random()*7)+1)+' personas del grupo';
   const log=S.logs[id];
   const detComment=document.getElementById('det-comment');
-  if(log?.comment){detComment.textContent='💬 '+log.comment;detComment.style.display='block';}
+  if((log && log.comment)){detComment.textContent='💬 '+log.comment;detComment.style.display='block';}
   else{detComment.style.display='none';}
   openModal('modal-detail');
 }
@@ -981,7 +988,7 @@ async function skipFromDetail(){
 }
 async function deleteHabit(){
   const h=S.habits.find(x=>x.id===detailId);
-  if(!confirm('¿Eliminar "'+h?.name+'"?'))return;
+  if(!confirm('¿Eliminar "'+(h && h.name)+'"?'))return;
   await db.from('habits').delete().eq('id',detailId);
   S.habits=S.habits.filter(x=>x.id!==detailId);
   renderHome();closeModal('modal-detail');toast('Hábito eliminado');
@@ -1202,11 +1209,11 @@ async function renderFeed(){
     .order('created_at',{ascending:false})
     .limit(30);
   fl.innerHTML='';
-  if(!posts?.length){
+  if(!(posts && posts.length)){
     fl.innerHTML='<div class="empty-state"><i class="ti ti-users"></i><p>Aún no hay publicaciones.<br>¡Completa un hábito y comparte!</p></div>';return;
   }
   for(const post of posts){
-    const name=post.profiles?.name||'Usuaria';
+    const name=(post.profiles && post.profiles.name)||'Usuaria';
     const ini=name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
     const {count:likesCount}=await db.from('feed_likes').select('*',{count:'exact',head:true}).eq('post_id',post.id);
     const {data:myLike}=await db.from('feed_likes').select('id').eq('post_id',post.id).eq('user_id',S.user.id).single();
@@ -1220,9 +1227,9 @@ async function renderFeed(){
         <p class="feed-habit"><i class="ti ti-check" style="font-size:11px;color:#A8C8AA"></i> ${post.habit_name}</p>
         <div class="feed-actions">
           <button class="feed-btn${myLike?' liked':''}" id="like-${post.id}"><i class="ti ${myLike?'ti-heart-filled':'ti-heart'}"></i> ${likesCount||0}</button>
-          <button class="feed-btn" id="cmt-${post.id}"><i class="ti ti-message-circle"></i> ${comments?.length||0}</button>
+          <button class="feed-btn" id="cmt-${post.id}"><i class="ti ti-message-circle"></i> ${(comments && comments.length)||0}</button>
         </div>
-        ${comments?.length?`<div class="feed-comments">${comments.map(c=>`<p class="comment-item">💬 <b>${c.profiles?.name||'Usuaria'}:</b> ${c.content}</p>`).join('')}</div>`:''}
+        ${(comments && comments.length)?`<div class="feed-comments">${comments.map(c=>`<p class="comment-item">💬 <b>${(c.profiles && c.profiles.name)||'Usuaria'}:</b> ${c.content}</p>`).join('')}</div>`:''}
       </div>`;
     div.querySelector('#like-'+post.id).addEventListener('click',()=>togLike(post.id,!!myLike));
     div.querySelector('#cmt-'+post.id).addEventListener('click',()=>addCmt(post.id));
@@ -1236,7 +1243,7 @@ async function togLike(postId,isLiked){
 }
 async function addCmt(postId){
   const c=prompt('Escribe un comentario motivador:');
-  if(c?.trim()){await db.from('feed_comments').insert({post_id:postId,user_id:S.user.id,content:c.trim()});renderFeed();}
+  if((c && c.trim())){await db.from('feed_comments').insert({post_id:postId,user_id:S.user.id,content:c.trim()});renderFeed();}
 }
 function getTimeAgo(ts){
   const diff=Math.round((Date.now()-new Date(ts))/60000);
@@ -1252,7 +1259,7 @@ async function renderAdmin(){
   const al=document.getElementById('admin-list');al.innerHTML='';
   let total=0;
   (profiles||[]).forEach(p=>{
-    const userLogs=logs?.filter(l=>l.user_id===p.id)||[];
+    const userLogs=(logs && logs.filter)(l=>l.user_id===p.id)||[];
     const done=userLogs.filter(l=>l.status==='done').length;
     const pct=userLogs.length?Math.round(done/userLogs.length*100):0;
     total+=pct;
@@ -1262,8 +1269,8 @@ async function renderAdmin(){
     row.innerHTML=`<div class="avatar" style="width:36px;height:36px;font-size:12px">${ini}</div><div style="flex:1"><p style="font-family:'Georgia',serif;font-size:14px;color:#1A1A18">${name}</p><div style="display:flex;align-items:center;gap:8px;margin-top:5px"><div class="pct-bar"><div class="pct-fill" style="width:${pct}%"></div></div><span style="font-family:system-ui,sans-serif;font-size:12px;color:#9A9890;flex-shrink:0">${pct}%</span></div></div><i class="ti ti-chevron-right" style="color:#D6D0C4;font-size:15px"></i>`;
     al.appendChild(row);
   });
-  document.getElementById('admin-total').textContent=profiles?.length||0;
-  document.getElementById('admin-avg').textContent=(profiles?.length?Math.round(total/profiles.length):0)+'%';
+  document.getElementById('admin-total').textContent=(profiles && profiles.length)||0;
+  document.getElementById('admin-avg').textContent=((profiles && profiles.length)?Math.round(total/profiles.length):0)+'%';
 }
 
 // ── FREQUENCY LOGIC ──
@@ -1320,7 +1327,7 @@ function togNotif(){S.notif=!S.notif;document.getElementById('t-notif').classLis
 function togPriv(){S.priv=!S.priv;document.getElementById('t-priv').classList.toggle('on',S.priv);}
 
 function openEditProfile(){
-  document.getElementById('edit-name').value=S.profile?.name||'';
+  document.getElementById('edit-name').value=(S.profile && S.profile.name)||'';
   openModal('modal-edit-profile');
 }
 
@@ -1418,7 +1425,7 @@ async function init(){
     showReset();
   } else {
     const {data:{session}}=await db.auth.getSession();
-    if(session?.user){onLogin(session.user);}
+    if((session && session.user)){onLogin(session.user);}
     else{navTo('login');}
   }
 }
