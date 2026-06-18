@@ -133,7 +133,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .empty-state p{font-family:system-ui,sans-serif;font-size:13px;color:#BBB8AE}
 
 .icon-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:4px}
-.icon-opt{width:100%;aspect-ratio:1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;border:2px solid transparent;transition:all 0.15s}
+.icon-opt{width:100%;aspect-ratio:1;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;border:2px solid transparent;transition:all 0.15s}
 .icon-opt.selected{border-width:2px;transform:scale(1.05)}
 
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1A1A18;color:#FDFCFA;font-family:system-ui,sans-serif;font-size:13px;padding:10px 18px;border-radius:20px;z-index:500;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap}
@@ -574,22 +574,21 @@ const db = createClient(SUPA_URL, SUPA_KEY, {
 
 // ── ICONS ──
 const ICONS=[
-  {icon:'',                     bg:'#F5F3EE',ic:'#BBB8AE'},  // Sin icono
-  {icon:'ti-yoga',              bg:'#F5EBF0',ic:'#7A3A5A'},  // Meditación
-  {icon:'ti-run',               bg:'#E8F5EC',ic:'#1A6A35'},  // Cardio
-  {icon:'ti-dumbbell',          bg:'#EAF0E8',ic:'#2A5A30'},  // Fuerza
-  {icon:'ti-walk',              bg:'#EAF5EC',ic:'#2A6A3A'},  // Caminar
-  {icon:'ti-salad',             bg:'#EAF5EA',ic:'#2A6A2A'},  // Nutrición
-  {icon:'ti-droplet',           bg:'#E8F0FB',ic:'#1A4A8A'},  // Hidratación
-  {icon:'ti-moon',              bg:'#EDEAF5',ic:'#3A2A7A'},  // Sueño
-  {icon:'ti-book',              bg:'#F5F0E8',ic:'#6A4A1A'},  // Lectura
-  {icon:'ti-pencil',            bg:'#F5ECE8',ic:'#6A3A2A'},  // Journaling
-  {icon:'ti-seeding',           bg:'#EAF0E8',ic:'#2A6030'},  // Crecimiento
-  {icon:'ti-briefcase',         bg:'#EEF0F5',ic:'#2A3A6A'},  // Trabajo
-  {icon:'ti-brain',             bg:'#F0EDE6',ic:'#5A4A3A'},  // Mente
-  {icon:'ti-sun',               bg:'#FDF5E6',ic:'#8A5A1A'},  // Rutina
-  {icon:'ti-heart',             bg:'#FBE8EE',ic:'#8A2040'},  // Salud
-  {icon:'ti-coffee',            bg:'#F5F0E8',ic:'#6A4A2A'},  // Hábito matutino
+  {icon:'',    emoji:'',   bg:'#F5F3EE',ic:'#BBB8AE'},
+  {icon:'🧘',  emoji:'🧘', bg:'#F5EBF0',ic:'#7A3A5A'},
+  {icon:'🏃',  emoji:'🏃', bg:'#E8F5EC',ic:'#1A6A35'},
+  {icon:'💪',  emoji:'💪', bg:'#EAF0E8',ic:'#2A5A30'},
+  {icon:'🥗',  emoji:'🥗', bg:'#EAF5EA',ic:'#2A6A2A'},
+  {icon:'💧',  emoji:'💧', bg:'#E8F0FB',ic:'#1A4A8A'},
+  {icon:'🌙',  emoji:'🌙', bg:'#EDEAF5',ic:'#3A2A7A'},
+  {icon:'📖',  emoji:'📖', bg:'#F5F0E8',ic:'#6A4A1A'},
+  {icon:'✍️',  emoji:'✍️', bg:'#F5ECE8',ic:'#6A3A2A'},
+  {icon:'🌱',  emoji:'🌱', bg:'#EAF0E8',ic:'#2A6030'},
+  {icon:'💼',  emoji:'💼', bg:'#EEF0F5',ic:'#2A3A6A'},
+  {icon:'🧠',  emoji:'🧠', bg:'#F0EDE6',ic:'#5A4A3A'},
+  {icon:'☀️',  emoji:'☀️', bg:'#FDF5E6',ic:'#8A5A1A'},
+  {icon:'❤️',  emoji:'❤️', bg:'#FBE8EE',ic:'#8A2040'},
+  {icon:'🎯',  emoji:'🎯', bg:'#F5EAEA',ic:'#7A2A2A'},
 ];
 
 // ── STATE ──
@@ -822,7 +821,7 @@ function makeCard(h){
   const div=document.createElement('div');
   div.className='habit-card'+(isDone?' done-card':'');
   div.innerHTML=`
-    <div class="h-icon" style="background:${h.icon_bg||'#F0EDE6'}"><i class="ti ${h.icon||'ti-star'}" style="color:${h.icon_color||'#5A4F3A'}"></i></div>
+    <div class="h-icon" style="background:${h.icon_bg||'#F5F3EE'}">${h.icon?'<span style="font-size:20px">'+h.icon+'</span>':'<span style="font-size:14px;color:#BBB8AE">—</span>'}</div>
     <div class="h-body">
       <p class="h-name${isDone?' dn':''}">${h.name}</p>
       <div class="h-meta">
@@ -1071,8 +1070,8 @@ function renderIconGrid(){
   ICONS.forEach((ic,i)=>{
     const btn=document.createElement('button');
     btn.className='icon-opt'+(i===S.selectedIconIdx?' selected':'');
-    btn.style.cssText=`background:${ic.bg};border-color:${i===S.selectedIconIdx?ic.ic:'transparent'}`;
-    btn.innerHTML=ic.icon?`<i class="ti ${ic.icon}" style="color:${ic.ic}"></i>`:'<span style="color:'+ic.ic+';font-size:11px;font-family:system-ui,sans-serif">—</span>';
+    btn.style.cssText='background:'+ic.bg+';border-color:'+(i===S.selectedIconIdx?'#1A1A18':'transparent')+';';
+    btn.innerHTML=ic.emoji?'<span style="font-size:20px">'+ic.emoji+'</span>':'<span style="font-size:16px;color:'+ic.ic+'">—</span>';
     btn.onclick=()=>{S.selectedIconIdx=i;renderIconGrid();};
     grid.appendChild(btn);
   });
@@ -1216,7 +1215,7 @@ async function saveHabit(){
   if(freq==='especificos'){const days=getSelectedDays();freqDays=days.length?JSON.stringify(days):null;}
   else if(freq==='semanal'){freqDays=document.getElementById('h-weekly-day').value;}
   else if(freq==='mensual'){freqDays=document.getElementById('h-monthly-day').value;}
-  const payload={user_id:S.user.id,name,icon:ico.icon,icon_bg:ico.bg,icon_color:ico.ic,freq,freq_days:freqDays,time_of_day:document.getElementById('h-time').value||null,requires_photo:S.photoOn,notify:S.notifOn,details:document.getElementById('h-details').value.trim()||null};
+  const payload={user_id:S.user.id,name,icon:ico.emoji||'',icon_bg:ico.bg,icon_color:ico.ic,freq,freq_days:freqDays,time_of_day:document.getElementById('h-time').value||null,requires_photo:S.photoOn,notify:S.notifOn,details:document.getElementById('h-details').value.trim()||null};
   showLoading(true);
   if(S.editingId){
     await db.from('habits').update(payload).eq('id',S.editingId);
