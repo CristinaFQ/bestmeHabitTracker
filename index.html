@@ -237,7 +237,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <button class="day-btn" onclick="chDay(-1)"><i class="ti ti-chevron-left" style="font-size:20px"></i></button>
     <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
       <span class="day-lbl" id="day-lbl">Hoy</span>
-      <button id="today-btn" onclick="goToday()" style="display:none;background:#1A1A18;color:#FDFCFA;border:none;border-radius:20px;font-family:system-ui,sans-serif;font-size:10px;padding:2px 10px;cursor:pointer;letter-spacing:0.5px">Ir a hoy</button>
+
     </div>
     <button class="day-btn" onclick="chDay(1)"><i class="ti ti-chevron-right" style="font-size:20px"></i></button>
   </div>
@@ -573,32 +573,19 @@ const db = createClient(SUPA_URL, SUPA_KEY, {
 });
 
 // ── ICONS ──
-// Icons organized by category: Salud, Mente, Movimiento, Nutrición, Trabajo, Bienestar
 const ICONS=[
-  // Salud física
-  {icon:'ti-heart-rate-monitor', bg:'#FBE8E8',ic:'#8B2020'},
-  {icon:'ti-dumbbell',           bg:'#EAF0E8',ic:'#2A5A30'},
-  {icon:'ti-run',                bg:'#E8F4EA',ic:'#1D7A35'},
-  {icon:'ti-walk',               bg:'#EAF5EC',ic:'#2A6A3A'},
-  {icon:'ti-bike',               bg:'#E8F0F5',ic:'#1A4A7A'},
-  // Mente y bienestar
-  {icon:'ti-brain',              bg:'#F0EDE6',ic:'#5A4F3A'},
-  {icon:'ti-yoga',               bg:'#F5EBF0',ic:'#7A2A5A'},
-  {icon:'ti-moon',               bg:'#EDEAF5',ic:'#3A2A7A'},
-  {icon:'ti-bed',                bg:'#EEF0F5',ic:'#3A4A6A'},
-  {icon:'ti-seeding',            bg:'#EAF0E8',ic:'#2A5030'},
-  // Nutrición
-  {icon:'ti-salad',              bg:'#EAF5EA',ic:'#2A6A2A'},
-  {icon:'ti-apple',              bg:'#F5EAEA',ic:'#7A2A2A'},
-  {icon:'ti-droplet',            bg:'#E8EFF5',ic:'#1A4A7A'},
-  {icon:'ti-coffee',             bg:'#F5F0E8',ic:'#6A4A2A'},
-  {icon:'ti-soup',               bg:'#FFF0E8',ic:'#8A4A1A'},
-  // Trabajo y desarrollo
-  {icon:'ti-book',               bg:'#F5F0E8',ic:'#5A4A2A'},
-  {icon:'ti-pencil',             bg:'#F5ECE8',ic:'#6A3A2A'},
-  {icon:'ti-device-laptop',      bg:'#EEF0F5',ic:'#2A3A6A'},
-  {icon:'ti-target',             bg:'#F5EAEA',ic:'#7A2A2A'},
-  {icon:'ti-chart-line',         bg:'#E8F0F5',ic:'#1A4A7A'},
+  {icon:'ti-yoga',              bg:'#F5EBF0',ic:'#7A3A5A'},  // Meditación
+  {icon:'ti-run',               bg:'#E8F5EC',ic:'#1A6A35'},  // Cardio
+  {icon:'ti-dumbbell',          bg:'#EAF0E8',ic:'#2A5A30'},  // Fuerza
+  {icon:'ti-salad',             bg:'#EAF5EA',ic:'#2A6A2A'},  // Nutrición
+  {icon:'ti-droplet',           bg:'#E8F0FB',ic:'#1A4A8A'},  // Hidratación
+  {icon:'ti-moon',              bg:'#EDEAF5',ic:'#3A2A7A'},  // Sueño
+  {icon:'ti-book',              bg:'#F5F0E8',ic:'#6A4A1A'},  // Lectura
+  {icon:'ti-pencil',            bg:'#F5ECE8',ic:'#6A3A2A'},  // Journaling
+  {icon:'ti-seeding',           bg:'#EAF0E8',ic:'#2A6030'},  // Crecimiento
+  {icon:'ti-briefcase',         bg:'#EEF0F5',ic:'#2A3A6A'},  // Trabajo
+  {icon:'ti-brain',             bg:'#F0EDE6',ic:'#5A4A3A'},  // Mente
+  {icon:'ti-sun',               bg:'#FDF5E6',ic:'#8A5A1A'},  // Rutina
 ];
 
 // ── STATE ──
@@ -788,8 +775,7 @@ function renderHome(){
   else if(S.day===1)label='Mañana · '+dateStr2;
   else label=dateStr2.charAt(0).toUpperCase()+dateStr2.slice(1);
   document.getElementById('day-lbl').textContent=label;
-  const todayBtn=document.getElementById('today-btn');
-  if(todayBtn)todayBtn.style.display=S.day!==0?'block':'none';
+
   const todayPill=document.getElementById('today-pill');
   if(todayPill)todayPill.style.display=S.day!==0?'block':'none';
 
