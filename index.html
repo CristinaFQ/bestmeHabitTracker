@@ -78,7 +78,7 @@ html,body{height:100%;overflow:hidden;font-family:'Georgia',serif;background:#1A
 .prog-fill{height:100%;background:#1A1A18;border-radius:3px;transition:width 0.4s ease}
 .month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .month-cell{aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:system-ui,sans-serif;font-size:11px;font-weight:500;cursor:pointer}
-.mc-full{background:#1A1A18;color:#FDFCFA}
+.mc-full{background:#C8DCCA;color:#2A5A30}
 .mc-high{background:#C8DCCA;color:#2A5A30}
 .mc-mid{background:#FDF0DC;color:#8A5A1A}
 .mc-empty{background:#F5F3EE;color:#BBB8AE}
@@ -286,10 +286,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <p id="stats-summary-lbl" style="font-family:system-ui,sans-serif;font-size:11px;color:#7A7A70;margin-top:8px;letter-spacing:0.5px;text-transform:uppercase"></p>
   </div>
   <div id="stats-compare" style="margin:0 16px 10px"></div>
-  <div id="stats-star" style="display:none;margin:0 16px 10px;background:#FDFAF2;border-radius:14px;padding:12px 16px;border:0.5px solid #E8E0CC;flex-direction:row;align-items:center;gap:12px">
-    <span style="font-size:20px">⭐</span>
-    <div><p style="font-family:system-ui,sans-serif;font-size:10px;color:#8A5A1A;text-transform:uppercase;letter-spacing:0.8px">Hábito destacado</p><p id="stats-star-name" style="font-family:'Georgia',serif;font-size:14px;color:#1A1A18;margin-top:2px"></p></div>
-  </div>
+
   <div id="stats-content" style="padding:0 16px 24px;overflow-y:auto;flex:1"></div>
 </div>
 
@@ -801,8 +798,9 @@ function makeCard(h){
   var div=document.createElement('div');
   div.className='habit-card'+(isDone?' done-card':'');
   var emojiHtml=h.icon&&h.icon!==''?'<span style="font-size:22px">'+h.icon+'</span>':'<span style="font-size:14px;color:#BBB8AE">—</span>';
+  var isAheadOfTime=isDone&&S.day>0;
   div.innerHTML='<div class="h-icon" style="background:'+(h.icon_bg||'#F5F3EE')+'">'+emojiHtml+'</div>'
-    +'<div class="h-body"><p class="h-name'+(isDone?' dn':'')+'">'+h.name+'</p>'
+    +'<div class="h-body"><p class="h-name'+(isDone?' dn':'')+'">'+h.name+(isAheadOfTime?' <span style="font-size:10px;color:#8A5A1A;font-family:system-ui,sans-serif">✓ marcado</span>':'')+'</p>'
     +'<div class="h-meta">'
     +(h.time_of_day?'<span class="time-lbl"><i class="ti ti-clock" style="font-size:10px"></i> '+h.time_of_day+'</span>':'')
     +(h.requires_photo?'<span class="pill p-warm"><i class="ti ti-camera" style="font-size:10px"></i> Foto</span>':'')
@@ -1016,10 +1014,14 @@ async function saveHabit(){
     if(res.data)S.habits.push(res.data);
   }
   showLoading(false);
+  var hadNotif=S.notifOn;
+  var savedHabit=S.editingId?S.habits.find(function(x){return x.id===S.editingId;}):S.habits[S.habits.length-1];
   S.photoOn=false;S.notifOn=false;
   document.getElementById('h-photo-track').classList.remove('on');document.getElementById('h-notif-track').classList.remove('on');
   closeModal('modal-add');renderHome();toast('Hábito guardado');
-  if(S.notifOn){var saved=S.habits[S.habits.length-1];if(saved&&saved.time_of_day)setTimeout(function(){addToCalendarAuto(saved);},400);}
+  if(hadNotif&&savedHabit&&savedHabit.time_of_day){
+    setTimeout(function(){addToCalendarAuto(savedHabit);},400);
+  }
 }
 
 // ── CALENDAR ──
@@ -1108,7 +1110,7 @@ async function renderStats(){
     document.getElementById('stats-summary-num').textContent=done.length+' de '+dayHabits.length;
     document.getElementById('stats-summary-lbl').textContent='hábitos completados';
     renderCompareEl();
-    renderStarEl(done.length>0?done[0]:null,null);
+
 
     var sc=document.getElementById('stats-content');sc.innerHTML='';
     if(!dayHabits.length){sc.innerHTML='<p style="font-family:system-ui,sans-serif;font-size:13px;color:#BBB8AE;text-align:center;padding:24px">No hay hábitos para este día</p>';return;}
@@ -1142,7 +1144,7 @@ async function renderStats(){
 
     var best=null,bestN=0;
     S.habits.forEach(function(h){var n=wlogs.filter(function(l){return l.habit_id===h.id&&l.status==='done';}).length;if(n>bestN){bestN=n;best=h;}});
-    renderStarEl(best,bestN>0?best.name+' ('+bestN+' días)':null);
+
 
     var sc2=document.getElementById('stats-content');sc2.innerHTML='';
     var dlRow=document.createElement('div');
@@ -1158,12 +1160,17 @@ async function renderStats(){
       var isFut=dds>todayStr,isToday2=dds===todayStr;
       var dayHabs=S.habits.filter(function(h){return habitAppliesToDay(h,dds);});
       var dayDone=isFut?0:dayHabs.filter(function(h){var l=wlogs.find(function(x){return x.habit_id===h.id&&x.log_date===dds;});return l&&l.status==='done';}).length;
-      var dp=dayHabs.length&&!isFut?(dayDone>0?Math.max(1,Math.round(dayDone/dayHabs.length*100)):0):null;
-      var cls=isFut?'mc-future':(dp===null?'mc-empty':dp===100?'mc-full':dp>=80?'mc-high':dp>0?'mc-mid':'mc-empty');
+      // Check if future day has any done logs (marked ahead)
+      var futureDone=isFut?dayHabs.filter(function(h){var l=wlogs.find(function(x){return x.habit_id===h.id&&x.log_date===dds;});return l&&l.status==='done';}).length:0;
+      var dp=dayHabs.length?(
+        isFut?(futureDone>0?Math.max(1,Math.round(futureDone/dayHabs.length*100)):null):
+        (dayDone>0?Math.max(1,Math.round(dayDone/dayHabs.length*100)):0)
+      ):null;
+      var cls=dp===null?'mc-future':(dp>=80?'mc-high':dp>0?'mc-mid':'mc-empty');
       var cell=document.createElement('div');
       cell.className='month-cell '+cls+(isToday2?' mc-today':'');
       cell.innerHTML='<span style="font-weight:600">'+dd.getDate()+'</span>'+(dp!==null?'<span style="font-size:9px;opacity:0.8">'+dp+'%</span>':'');
-      if(!isFut){(function(d2){cell.onclick=function(){selectWeekDay(d2);};cell.style.cursor='pointer';})(dds);}
+      (function(d2){cell.onclick=function(){selectWeekDay(d2);};cell.style.cursor='pointer';})(dds);
       cell._ds=dds;
       if(statSelectedDay===dds){cell.style.outline='2px solid #1A1A18';cell.style.outlineOffset='2px';}
       wGrid.appendChild(cell);
@@ -1173,16 +1180,6 @@ async function renderStats(){
     // Selected day detail OR habit bars
     var weekDetailEl=document.createElement('div');weekDetailEl.id='week-day-detail';sc2.appendChild(weekDetailEl);
     renderWeekDetail(wlogs,wStart,todayStr);
-
-
-    S.habits.forEach(function(h){
-      var hP=0,hD=0;
-      for(var i=0;i<7;i++){var dd=new Date(wStart);dd.setDate(wStart.getDate()+i);var dds=dd.toISOString().split('T')[0];if(dds>todayStr)continue;if(habitAppliesToDay(h,dds)){hP++;var l=wlogs.find(function(x){return x.habit_id===h.id&&x.log_date===dds;});if(l&&l.status==='done')hD++;}}
-      var hPct=hP?(hD>0?Math.max(1,Math.round(hD/hP*100)):0):0;
-      var div=document.createElement('div');div.className='prog-row';
-      div.innerHTML='<div class="prog-label"><span style="font-family:Georgia,serif;font-size:13px;color:#1A1A18">'+h.name+'</span><span style="font-family:system-ui,sans-serif;font-size:12px;color:#9A9890">'+hPct+'%</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+hPct+'%"></div></div>';
-      sc2.appendChild(div);
-    });
 
   } else if(statPeriod==='month'){
     var md=new Date(today.getFullYear(),today.getMonth()+statOffset,1);
@@ -1207,7 +1204,7 @@ async function renderStats(){
 
     var mBest=null,mBestN=0;
     S.habits.forEach(function(h){var n=mlogs.filter(function(l){return l.habit_id===h.id&&l.status==='done';}).length;if(n>mBestN){mBestN=n;mBest=h;}});
-    renderStarEl(mBest,mBestN>0?mBest.name+' ('+mBestN+' días)':null);
+
 
     var sc3=document.getElementById('stats-content');sc3.innerHTML='';
     var dlRow2=document.createElement('div');
@@ -1223,23 +1220,38 @@ async function renderStats(){
       var dds=dd.toISOString().split('T')[0];
       var isFut2=dds>todayStr,isToday3=dds===todayStr;
       var cls='mc-future';
-      if(!isFut2){
-        var dh=S.habits.filter(function(h){return habitAppliesToDay(h,dds);});
-        if(dh.length){
-          var dDone=dh.filter(function(h){var l=mlogs.find(function(x){return x.habit_id===h.id&&x.log_date===dds;});return l&&l.status==='done';}).length;
+      var dh=S.habits.filter(function(h){return habitAppliesToDay(h,dds);});
+      if(dh.length){
+        var dDone=dh.filter(function(h){var l=mlogs.find(function(x){return x.habit_id===h.id&&x.log_date===dds;});return l&&l.status==='done';}).length;
+        if(isFut2){
+          // Future: color if marked ahead of time
+          cls=dDone>0?(dDone===dh.length?'mc-high':Math.round(dDone/dh.length*100)>=80?'mc-high':'mc-mid'):'mc-future';
+        } else {
           var dp2=dDone>0?Math.max(1,Math.round(dDone/dh.length*100)):0;
-          cls=dp2===100?'mc-full':dp2>=80?'mc-high':dp2>0?'mc-mid':'mc-empty';
-        } else {cls='mc-empty';}
-      }
+          cls=dp2>=80?'mc-high':dp2>0?'mc-mid':'mc-empty';
+        }
+      } else {cls=isFut2?'mc-future':'mc-empty';}
       var cell2=document.createElement('div');
       cell2.className='month-cell '+cls+(isToday3?' mc-today':'');
       cell2.innerHTML='<span style="font-weight:600">'+i+'</span>';
-      if(!isFut2){(function(d2){cell2.onclick=function(){statOffset=Math.round((new Date(d2+'T12:00:00')-today)/86400000);setPeriod('day');};})(dds);}
+      (function(d2){cell2.onclick=function(){
+        var target=new Date(d2+'T12:00:00');
+        var now=new Date();
+        now.setHours(0,0,0,0);
+        var diff=Math.round((target-now)/86400000);
+        S.day=diff;
+        db.from('habit_logs').select('*').eq('user_id',S.user.id).eq('log_date',d2).then(function(res){
+          S.logs={};(res.data||[]).forEach(function(l){S.logs[l.habit_id]=l;});
+          statOffset=0;
+          navTo('stats');
+          setTimeout(function(){setPeriod('day');},50);
+        });
+      };cell2.style.cursor='pointer';})(dds);
       mGrid.appendChild(cell2);
     }
     sc3.appendChild(mGrid);
 
-    var pt2=document.createElement('p');pt2.style.cssText='font-family:system-ui,sans-serif;font-size:11px;color:#9A9890;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px';pt2.textContent='Por hábito';sc3.appendChild(pt2);
+    var pt2=document.createElement('p');pt2.style.cssText='font-family:system-ui,sans-serif;font-size:11px;color:#9A9890;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px';pt2.textContent='Cumplimiento mensual por hábito';sc3.appendChild(pt2);
     S.habits.forEach(function(h){
       var hP=0,hD=0;
       for(var i=1;i<=daysInMonth;i++){var dd=new Date(md.getFullYear(),md.getMonth(),i);var dds=dd.toISOString().split('T')[0];if(dds>todayStr)break;if(habitAppliesToDay(h,dds)){hP++;var l=mlogs.find(function(x){return x.habit_id===h.id&&x.log_date===dds;});if(l&&l.status==='done')hD++;}}
@@ -1267,7 +1279,18 @@ function selectWeekDay(ds){
       }
     });
   }
-  renderWeekDetail(window._wlogs||[],window._wStart||new Date(),window._wTodayStr||'');
+  // If a day is selected, fetch fresh logs for that specific day
+  if(statSelectedDay&&S.user){
+    db.from('habit_logs').select('*').eq('user_id',S.user.id).eq('log_date',statSelectedDay).then(function(res){
+      var dayLogs=res.data||[];
+      // Merge into wlogs
+      var merged=(window._wlogs||[]).filter(function(l){return l.log_date!==statSelectedDay;}).concat(dayLogs);
+      window._wlogs=merged;
+      renderWeekDetail(merged,window._wStart||new Date(),window._wTodayStr||'');
+    });
+  } else {
+    renderWeekDetail(window._wlogs||[],window._wStart||new Date(),window._wTodayStr||'');
+  }
 }
 
 function renderWeekDetail(wlogs,wStart,todayStr){
@@ -1278,6 +1301,7 @@ function renderWeekDetail(wlogs,wStart,todayStr){
   if(statSelectedDay){
     // Show day detail
     var ds=statSelectedDay;
+    var isFutureDay=ds>todayStr;
     var logsMap={};
     (wlogs||[]).filter(function(l){return l.log_date===ds;}).forEach(function(l){logsMap[l.habit_id]=l;});
     var dayHabits=S.habits.filter(function(h){return habitAppliesToDay(h,ds);});
@@ -1300,30 +1324,37 @@ function renderWeekDetail(wlogs,wStart,todayStr){
       container.appendChild(empty);return;
     }
     if(done.length){addSecTitle(container,'Completados');done.forEach(function(h){container.appendChild(makeStatCard(h,logsMap[h.id],'done'));});}
-    if(missed.length){
-      var isPast=ds<todayStr;
-      addSecTitle(container,isPast?'No realizados':'Pendientes');
-      missed.forEach(function(h){container.appendChild(makeStatCard(h,null,isPast?'missed':'pending'));});
+    if(!done.length&&!isFutureDay&&ds<todayStr){
+      var noHabits=document.createElement('p');
+      noHabits.style.cssText='font-family:system-ui,sans-serif;font-size:13px;color:#BBB8AE;text-align:center;padding:16px 0';
+      noHabits.textContent='Ningún hábito completado este día';
+      container.appendChild(noHabits);
     }
-  } else {
-    // Show habit bars
-    var pt=document.createElement('p');
-    pt.style.cssText='font-family:system-ui,sans-serif;font-size:11px;color:#9A9890;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;margin-top:4px';
-    pt.textContent='Por hábito';container.appendChild(pt);
-    S.habits.forEach(function(h){
-      var hP=0,hD=0;
-      for(var i=0;i<7;i++){
-        var dd=new Date(wStart);dd.setDate(wStart.getDate()+i);
-        var dds=dd.toISOString().split('T')[0];
-        if(dds>todayStr)continue;
-        if(habitAppliesToDay(h,dds)){hP++;var l=(wlogs||[]).find(function(x){return x.habit_id===h.id&&x.log_date===dds;});if(l&&l.status==='done')hD++;}
-      }
-      var hPct=hP?(hD>0?Math.max(1,Math.round(hD/hP*100)):0):0;
-      var div=document.createElement('div');div.className='prog-row';
-      div.innerHTML='<div class="prog-label"><span style="font-family:Georgia,serif;font-size:13px;color:#1A1A18">'+h.name+'</span><span style="font-family:system-ui,sans-serif;font-size:12px;color:#9A9890">'+hPct+'%</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+hPct+'%"></div></div>';
-      container.appendChild(div);
-    });
   }
+  // Separator before bars when a day is selected
+  if(statSelectedDay){
+    var sep=document.createElement('div');sep.style.height='1px';sep.style.background='#EAE6DE';sep.style.margin='14px 0';container.appendChild(sep);
+  }
+  renderWeekHabitBars(container,wlogs,wStart,todayStr);
+}
+
+function renderWeekHabitBars(container,wlogs,wStart,todayStr){
+  var pt=document.createElement('p');
+  pt.style.cssText='font-family:system-ui,sans-serif;font-size:11px;color:#9A9890;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;margin-top:4px';
+  pt.textContent='Cumplimiento semanal por hábito';container.appendChild(pt);
+  S.habits.forEach(function(h){
+    var hP=0,hD=0;
+    for(var i=0;i<7;i++){
+      var dd=new Date(wStart);dd.setDate(wStart.getDate()+i);
+      var dds=dd.toISOString().split('T')[0];
+      if(dds>todayStr)continue;
+      if(habitAppliesToDay(h,dds)){hP++;var l=(wlogs||[]).find(function(x){return x.habit_id===h.id&&x.log_date===dds;});if(l&&l.status==='done')hD++;}
+    }
+    var hPct=hP?(hD>0?Math.max(1,Math.round(hD/hP*100)):0):0;
+    var div=document.createElement('div');div.className='prog-row';
+    div.innerHTML='<div class="prog-label"><span style="font-family:Georgia,serif;font-size:13px;color:#1A1A18">'+h.name+'</span><span style="font-family:system-ui,sans-serif;font-size:12px;color:#9A9890">'+hPct+'%</span></div><div class="prog-bar"><div class="prog-fill" style="width:'+hPct+'%"></div></div>';
+    container.appendChild(div);
+  });
 }
 
 function renderCompareEl(){
@@ -1333,11 +1364,7 @@ function renderCompareEl(){
   var m=msgs[Math.floor(Math.random()*3)];
   el.innerHTML='<div style="display:inline-flex;align-items:center;gap:6px;background:'+m.b+';border-radius:20px;padding:5px 12px"><span style="font-size:13px;font-weight:500;color:'+m.c+'">'+m.i+'</span><span style="font-family:system-ui,sans-serif;font-size:12px;color:'+m.c+'">'+m.t+'</span></div>';
 }
-function renderStarEl(habit,label){
-  var el=document.getElementById('stats-star');var nameEl=document.getElementById('stats-star-name');
-  if(!el||!nameEl)return;
-  if(habit){el.style.display='flex';nameEl.textContent=label||habit.name;}else{el.style.display='none';}
-}
+
 function addSecTitle(parent,text){
   var p=document.createElement('p');p.style.cssText='font-family:system-ui,sans-serif;font-size:10px;color:#BBB8AE;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;margin-top:4px';p.textContent=text;parent.appendChild(p);
 }
